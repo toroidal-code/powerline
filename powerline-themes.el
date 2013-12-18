@@ -242,6 +242,75 @@
                              (powerline-fill nil (powerline-width rhs))
                              (powerline-render rhs)))))))
 
+(defun check-in-list (list elems)
+  (catch 'tag
+	(dolist (elem elems)
+	  (if (member elem list)
+		  (throw 'tag elem)))))
+
+(defun powerline-vimish-theme ()
+  "Setup the default mode-line."
+  (interactive)
+  (setq-default mode-line-format
+                '("%e"
+                  (:eval
+                   (let* ((active (powerline-selected-window-active))
+                          (mode-line (if active 'mode-line 'mode-line-inactive))
+                          (face1 (if active 'powerline-active1 'powerline-inactive1))
+                          (face2 (if active 'powerline-active2 'powerline-inactive2))
+                          (separator-left (intern (format "powerline-%s-%s"
+                                                          powerline-default-separator
+                                                          (car powerline-default-separator-dir))))
+                          (separator-right (intern (format "powerline-%s-%s"
+                                                           powerline-default-separator
+                                                           (cdr powerline-default-separator-dir))))
+                          (lhs (list
+;;                                     (powerline-buffer-size nil 'l)
+;;                                     (powerline-raw mode-line-mule-info nil 'l)
+
+                                     ;; (when (and (boundp 'which-func-mode) which-func-mode)
+                                     ;;   (powerline-raw which-func-format nil 'l))
+                                     ;; (powerline-raw " ")
+                                     ;; (funcall separator-left mode-line face2)
+                                     ;; (when (boundp 'erc-modified-channels-object)
+                                     ;;   (powerline-raw erc-modified-channels-object face1 'l))
+                                     (powerline-vc face2 'r)
+									 (when vc-mode
+									   (powerline-raw "❯" face2))
+                                     (powerline-buffer-id face2 'l)
+									 (powerline-raw "%*" face2 'l)
+                                     (powerline-raw " " face2)
+;;                                     (powerline-process face2)
+;;                                     (powerline-minor-modes face1 'l)
+                                     (powerline-narrow face2 'l)
+                                     (funcall separator-left face2 face1)))
+                          (rhs (list (powerline-raw global-mode-string face1 'r)
+									 (let* ((input (split-string (symbol-name buffer-file-coding-system) "-"))
+											(platform (check-in-list input '("mac" "unix" "dos")))
+											(encoding (delete platform input)))
+									   (concat
+										(if (not (null platform))
+											(concat
+											 (powerline-raw platform face1)
+											 (powerline-raw " ❮ " face1))
+										  "")
+										(powerline-raw (mapconcat 'identity encoding "-") face1)))
+									 (powerline-raw " ❮" face1)
+                                     (powerline-major-mode face1 'l)
+                                     (powerline-raw " " face1)
+                                     (funcall separator-right face1 face2)
+                                     (powerline-raw " " face2)
+                                     (powerline-raw "%p" face2 'r)
+                                     (funcall separator-right face2 mode-line)
+                                     (powerline-raw "%l" nil 'l)
+                                     (powerline-raw ": " nil 'l)
+                                     (powerline-raw "%c" nil 'r)
+                                     (powerline-hud face2 face1))))
+                     (concat (powerline-render lhs)
+                             (powerline-fill face1 (powerline-width rhs))
+                             (powerline-render rhs)))))))
+
+
 
 (provide 'powerline-themes)
 
