@@ -13,7 +13,7 @@
 ;;; Commentary:
 ;;
 ;; Powerline is a library for customizing the mode-line that is based on the Vim
-;; Powerline. A collection of predefined themes comes with the package.
+;; Powerline.  A collection of predefined themes comes with the package.
 ;;
 
 ;;; Code:
@@ -23,7 +23,9 @@
 
 (require 'cl-lib)
 
-(defface powerline-active1 '((t (:background "grey22" :inherit mode-line)))
+(defface powerline-active1 '((t (:background "grey22" 
+								 :foreground "grey90"
+								 :inherit mode-line)))
   "Powerline face 1."
   :group 'powerline)
 
