@@ -35,6 +35,12 @@
   "Powerline face 2."
   :group 'powerline)
 
+(defface powerline-active3 '((t (:background "#afd700" 
+								 :foreground "#008700" 
+								 :inherit mode-line)))
+  "Powerline face 3."
+  :group 'powerline)
+
 (defface powerline-inactive1
   '((t (:background "grey11" :inherit mode-line-inactive)))
   "Powerline face 1."
@@ -44,6 +50,12 @@
   '((t (:background "grey20" :inherit mode-line-inactive)))
   "Powerline face 2."
   :group 'powerline)
+
+(defface powerline-inactive3 '((t (:foreground "grey90" :background "grey30" :inherit mode-line)))
+  "Powerline face 3."
+  :group 'powerline)
+
+
 
 (defcustom powerline-default-separator 'arrow
   "The separator to use for the default theme.
@@ -458,10 +470,7 @@ static char * %s[] = {
            (eq (pl/minibuffer-selected-window)
                (selected-window)))))
 
-(defun powerline-revert ()
-  "Revert to the default Emacs mode-line."
-  (interactive)
-  (setq-default mode-line-format pl/default-mode-line))
+
 
 (defun pl/render (item)
   "Render a powerline ITEM."
