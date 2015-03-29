@@ -78,7 +78,18 @@ zigzag, butt, rounded, contour, curve"
                  (const slant)
                  (const wave)
                  (const zigzag)
+		 (const utf-8)
                  (const nil)))
+
+(defcustom powerline-utf-8-separator-left #xe0b0
+  "The unicode character number for the left facing separator"
+  :group 'powerline
+  :type  '(choice integer (const nil)))
+
+(defcustom powerline-utf-8-separator-right #xe0b2
+  "The unicode character number for the right facing separator"
+  :group 'powerline
+  :type  '(choice integer (const nil)))
 
 (defcustom powerline-default-separator-dir '(left . right)
   "The separator direction to use for the default theme.
@@ -122,6 +133,22 @@ This is needed to make sure that text is properly aligned."
     ;; Store it as a frame-local variable
     (modify-frame-parameters nil `((powerline-cache . ,table)))
     table))
+
+(defun powerline-current-separator ()
+  "Get the current default separator. Always returns utf-8 in non-gui mode."
+  (if window-system
+      powerline-default-separator
+    'utf-8))
+
+;;
+;; the frame-local powerline cache causes problems if included in a saved desktop,
+;; so delete it before the desktop is saved.
+;;
+;; see https://github.com/milkypostman/powerline/issues/58
+;;
+(defun powerline-delete-cache ()
+  (set-frame-parameter nil 'powerline-cache nil))
+(add-hook 'desktop-save-hook 'powerline-delete-cache)
 
 ;; from memoize.el @ http://nullprogram.com/blog/2010/07/26/
 (defun pl/memoize (func)
@@ -184,6 +211,8 @@ The memoization cache is frame-local."
   (pl/memoize (pl/zigzag right))
   (pl/memoize (pl/nil left))
   (pl/memoize (pl/nil right))
+  (pl/utf-8 left)
+  (pl/utf-8 right)
   (pl/reset-cache))
 
 (powerline-reset)
@@ -247,8 +276,8 @@ static char * %s[] = {
 (defun powerline-hud (face1 face2 &optional width)
   "Return an XPM of relative buffer location using FACE1 and FACE2 of optional WIDTH."
   (unless width (setq width 2))
-  (let ((color1 (if face1 (face-attribute face1 :background) "None"))
-        (color2 (if face2 (face-attribute face2 :background) "None"))
+  (let ((color1 (if face1 (face-background face1) "None"))
+        (color2 (if face2 (face-background face2) "None"))
         (height (or powerline-height (frame-char-height)))
         pmax
         pmin
@@ -359,7 +388,7 @@ static char * %s[] = {
                                              (.5 . left-margin))))
               'face face))
 
-;;;###autoload
+;;;###autoload (autoload 'powerline-major-mode "powerline")
 (defpowerline powerline-major-mode
   (propertize (format-mode-line mode-name)
               'mouse-face 'mode-line-highlight
@@ -372,7 +401,7 @@ static char * %s[] = {
                            (define-key map [mode-line down-mouse-3] mode-line-mode-menu)
                            map)))
 
-;;;###autoload
+;;;###autoload (autoload 'powerline-minor-modes "powerline")
 (defpowerline powerline-minor-modes
   (mapconcat (lambda (mm)
                (propertize mm
@@ -395,7 +424,7 @@ static char * %s[] = {
              (split-string (format-mode-line minor-mode-alist))
              (propertize " " 'face face)))
 
-;;;###autoload
+;;;###autoload (autoload 'powerline-narrow "powerline")
 (defpowerline powerline-narrow
   (let (real-point-min real-point-max)
     (save-excursion
@@ -410,13 +439,18 @@ static char * %s[] = {
                   'local-map (make-mode-line-mouse-map
                               'mouse-1 'mode-line-widen)))))
 
-;;;###autoload
+;;;###autoload (autoload 'powerline-vc "powerline")
 (defpowerline powerline-vc
-  (when (and (buffer-file-name (current-buffer))
-             vc-mode)
-    (format-mode-line '(vc-mode vc-mode))))
+  (when (and (buffer-file-name (current-buffer)) vc-mode)
+    (if window-system
+	(format-mode-line '(vc-mode vc-mode))
+      (let ((backend (vc-backend (buffer-file-name (current-buffer)))))
+	(when backend
+	  (format " %s %s"
+		  (char-to-string #xe0a0)
+		  (vc-working-revision (buffer-file-name (current-buffer)) backend)))))))
 
-;;;###autoload
+;;;###autoload (autoload 'powerline-buffer-size "powerline")
 (defpowerline powerline-buffer-size
   (propertize
    (if powerline-buffer-size-suffix
@@ -429,11 +463,17 @@ static char * %s[] = {
                                 (not powerline-buffer-size-suffix))
                           (force-mode-line-update)))))
 
-;;;###autoload
-(defpowerline powerline-buffer-id
-  (format-mode-line mode-line-buffer-identification))
+(defsubst powerline-trim (s)
+  "Remove whitespace at the beginning and the end of string S."
+  (replace-regexp-in-string
+   "\\`[ \t\n\r]+" ""
+   (replace-regexp-in-string "[ \t\n\r]+\\'" "" s)))
 
-;;;###autoload
+;;;###autoload (autoload 'powerline-buffer-id "powerline")
+(defpowerline powerline-buffer-id
+    (powerline-trim (format-mode-line mode-line-buffer-identification)))
+
+;;;###autoload (autoload 'powerline-process "powerline")
 (defpowerline powerline-process
   (cond
    ((symbolp mode-line-process) (symbol-value mode-line-process))
@@ -461,14 +501,24 @@ static char * %s[] = {
 
 (add-hook 'minibuffer-exit-hook 'pl/minibuffer-exit)
 
+(defvar powerline-selected-window (frame-selected-window))
+(defun powerline-set-selected-window ()
+  "sets the variable `powerline-selected-window` appropriately"
+  (when (not (minibuffer-window-active-p (frame-selected-window)))
+    (setq powerline-selected-window (frame-selected-window))))
+
+(add-hook 'window-configuration-change-hook 'powerline-set-selected-window)
+(add-hook 'focus-in-hook 'powerline-set-selected-window)
+(add-hook 'focus-out-hook 'powerline-set-selected-window)
+
+(defadvice select-window (after powerline-select-window activate)
+  "makes powerline aware of window changes"
+  (powerline-set-selected-window))
+
+;;;###autoload (autoload 'powerline-selected-window-active "powerline")
 (defun powerline-selected-window-active ()
   "Return whether the current window is active."
-  (or (eq (frame-selected-window)
-          (selected-window))
-      (and (minibuffer-window-active-p
-            (frame-selected-window))
-           (eq (pl/minibuffer-selected-window)
-               (selected-window)))))
+  (eq powerline-selected-window (selected-window)))
 
 
 
