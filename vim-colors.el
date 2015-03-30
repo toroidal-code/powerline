@@ -8,7 +8,9 @@
   `((t (:foreground ,fg
         :background ,bg
         :bold ,bold
-        :inherit mode-line))))
+        :overline nil
+        :underline nil
+        :box ,bg))))
 
 (defun powerline--gen-facedef (feature mode args)
   (let* ((name (format "powerline-%s-%s" feature mode))
@@ -23,7 +25,7 @@
        (powerline--gen-facedef feature mode args))))
 
 ;; Color definitions
-(defvar powerline-vim-colors-alist
+(setf powerline-vim-colors-alist
       (let ((black "#000000")                 ; 16
             (white "#FFFFFF")                 ; 231
             
@@ -71,6 +73,7 @@
            
            (("state_indicator")
             (normal      ,darkestgreen    ,brightgreen  t)
+            ;;(inactive    ,gray6           ,gray2        t)
             (insert      ,darkestcyan     ,white        t)
             (visual      ,darkred         ,brightorange t)
             (replace     ,white           ,brightred    t)
@@ -83,7 +86,7 @@
            
            (("fileinfo" "filename")
             (normal      ,white           ,gray4        t)
-            (inactive    ,gray7           ,gray0        t)
+            (inactive    ,gray7           ,gray1        t)
             (insert      ,white           ,darkblue     t))
            
            (("fileinfo.filepath")
@@ -105,6 +108,7 @@
              "pwd" "filetype" "rvm.string" "rvm.statusline"
              "virtualenv.statusline" "charcode" "currhigroup")
             (normal      ,gray8           ,gray2)
+            (inactive    ,gray3           ,gray0)
             (insert      ,mediumcyan      ,darkestblue))
            
            (("lineinfo")
@@ -171,3 +175,9 @@
             (normal      ,white           ,darkestpurple))))))
 
 (provide 'vim-colors)
+;; Local Variables:
+;; no-byte-compile: t
+;; eval: (when (fboundp 'rainbow-mode) (rainbow-mode 1))
+;; indent-tabs-mode: nil
+;; End:
+;;; vim-colors.el ends here

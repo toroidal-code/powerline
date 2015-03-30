@@ -281,7 +281,7 @@ and if not, try to get the corresponding
                       (error "There's no vim face with the prefix: %s"
                              (mapconcat 'identity prefix "-"))))))
     
-    (cond ((facep face)                 ; If our FACE is a face (even if it's not a powerline face)
+    (cond ((facep face)                 ; If our face is a FACE (even if it's not a powerline face)
            (intern face))               ; just intern the string and send it back
 
           ;; Otherwise.
@@ -326,13 +326,14 @@ and if not, try to get the corresponding
   "Setup the default mode-line."
   ;; Populate our faces 
   (mapcar 'eval  (powerline--generate-facedefs powerline-vim-colors-alist))
-  
+  (set-face-attribute 'mode-line-inactive nil
+                      :background (face-background (pl/vim-face "SPLIT" "inactive")) :underline nil
+                      :overline nil :box nil)
   (interactive)
   (setq-default mode-line-format
                 '("%e"
                   (:eval
                    (let* ((active (powerline-selected-window-active))
-                          (mode-line (if active 'mode-line 'mode-line-inactive))
                           (harddiv-left (intern (format "powerline-%s-%s"
                                                           (powerline-current-separator)
                                                           (car powerline-default-separator-dir))))
@@ -345,9 +346,7 @@ and if not, try to get the corresponding
                           (softdiv-right (cond ((eq powerline-default-separator 'utf-8) "")
                                                 ((eq powerline-default-separator 'nil) "|")
                                                 (t "<")))
-
-                          (editor-state (cond ((and active evil-mode)
-                                               (symbol-name evil-state))
+                          (editor-state (cond ((and active evil-mode) (symbol-name evil-state))
                                               (active "active")
                                               (t "inactive")))
                           (state-indicator-face (pl/vim-face "state_indicator" editor-state))
@@ -376,34 +375,34 @@ and if not, try to get the corresponding
                                    (powerline-raw (downcase (format-mode-line '(vc-mode vc-mode))) vc-face 'r)
                                    (powerline-raw softdiv-left vc-face)))
                                 (powerline-buffer-id fileinfo-face 'l)
-                                (powerline-raw "%* " fileinfo-face 'l)
-                                ;; (powerline-raw " " face2)
+                                (powerline-raw "%*" fileinfo-face 'lr)
                                 (powerline-narrow fileinfo-face 'l)
                                 (funcall harddiv-left fileinfo-face split-face)))
 
                           ;; Right Hand Side
                           (rhs (list
                                 (powerline-raw global-mode-string split-face 'r)
-                                ;; (funcall harddiv-right split-face)
+                                (funcall harddiv-right split-face fileformat-face)
                                 (concat
                                  (when (not (null platform))
-                                   (concat (powerline-raw platform fileformat-face)
-                                           (powerline-raw (concat " " softdiv-right " ") fileformat-face)))
-                                 (powerline-raw encoding fileencoding-face)
-                                 (powerline-raw (concat " " softdiv-right) fileencoding-face))
-                                (powerline-major-mode filetype-face 'l)
-                                (powerline-raw " " filetype-face)
+                                   (concat (powerline-raw platform fileformat-face 'r)
+                                           (powerline-raw softdiv-right fileformat-face)))
+                                 (powerline-raw encoding fileencoding-face 'lr)
+                                 (powerline-raw softdiv-right fileencoding-face))
+                                (powerline-major-mode filetype-face 'lr)
                                 (funcall harddiv-right filetype-face scrollpercent-face)
-                                (powerline-raw " " scrollpercent-face)
-                                (powerline-raw "%p" scrollpercent-face 'r)
+                                (powerline-raw "%p" scrollpercent-face 'lr)
                                 (funcall harddiv-right scrollpercent-face lineinfo-face)
                                 (powerline-raw "%l" lineinfo-face 'l)
-                                (powerline-raw ": " lineinfo-face 'l)
-                                (powerline-raw "%c" lineinfo-face 'r)
-                                ;; (powerline-hud face2 face1)
-                                )))
-
-                     
+                                (powerline-raw ":" lineinfo-face 'lr)
+                                (powerline-raw "%c" lineinfo-face 'r))))
+                     (when active
+                       (set-face-attribute 'mode-line-active nil
+;;                                          :background nil ;;(face-background (pl/vim-face "SPLIT" "active"))
+;;                                         :underline nil
+;;                                         :overline nil
+;;                                         :box t
+                                          ))
                      (concat (powerline-render lhs)
                              (powerline-fill split-face (powerline-width rhs))
                              (powerline-render rhs)))))))

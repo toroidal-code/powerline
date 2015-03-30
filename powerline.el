@@ -56,7 +56,6 @@
   :group 'powerline)
 
 
-
 (defcustom powerline-default-separator 'arrow
   "The separator to use for the default theme.
 
@@ -356,23 +355,25 @@ static char * %s[] = {
   (when str
     (let* ((rendered-str (format-mode-line str))
            (padded-str (concat
-                        (when (and (> (length rendered-str) 0) (eq pad 'l)) " ")
+                        (when (and (> (length rendered-str) 0)
+                                   (or (eq pad 'l) (eq pad 'lr))) " ")
                         (if (listp str) rendered-str str)
-                        (when (and (> (length rendered-str) 0) (eq pad 'r)) " "))))
+                        (when (and (> (length rendered-str) 0)
+                                   (or (eq pad 'r) (eq pad 'lr))) " "))))
 
       (if face
           (pl/add-text-property padded-str 'face face)
         padded-str))))
 
 ;;;###autoload
-(defun powerline-fill (face reserve)
+(defun powerline-fill (face &optional reserve)
   "Return empty space using FACE and leaving RESERVE space on the right."
   (unless reserve
     (setq reserve 20))
   (when powerline-text-scale-factor
     (setq reserve (* powerline-text-scale-factor reserve)))
   (when (and window-system (eq 'right (get-scroll-bar-mode)))
-    (setq reserve (- reserve 3)))
+    (setq reserve (- reserve 2)))
   (propertize " "
               'display `((space :align-to (- (+ right right-fringe right-margin) ,reserve)))
               'face face))

@@ -324,7 +324,9 @@ destination color, and 2 is the interpolated color between 0 and 1."
 	(char-to-string ,(intern (format "powerline-utf-8-separator-%s"
 					 dir-name)))
 	(list :foreground (face-attribute ,src-face :background)
-	      :background (face-attribute ,dst-face :background))))))
+	      :background (face-attribute ,dst-face :background)
+              :underline nil
+              :box (face-attribute ,dst-face :background))))))
 
 
 (provide 'powerline-separators)
