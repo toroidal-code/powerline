@@ -266,47 +266,96 @@
 	  (if (member elem list)
 		  (throw 'tag elem)))))
 
+
+;; Get a face for the current input mode and
+;; desired feature. Defaults to "powerline-FEATURE-normal"
+(defun powerline--get-vim-face (face &optional last-face original)
+  "Find whether or not FACE is a valid face,
+and if not, try to get the corresponding 
+'-normal' face "
+  (let ((split-face-name nil) (concat-face-name nil)
+        (report-wrong-prefix
+         (lambda ()
+           (let ((prefix (subseq (or split-face-name (split-string face "-")) 0 2)))
+             (error "There's no vim face with the prefix: %s"
+                    (mapconcat 'identity prefix "-"))))))
+    (cond ((facep face)
+           (intern face))
+          ((and (< 2 (length (setf split-face-name (split-string face "-"))))
+                (string-equal (first split-face-name) "powerline")
+                (not (string-equal (third split-face-name) "normal")))
+           (progn (setf (nth 3 split-face-name) "normal")
+                  (setf concat-face-name (mapconcat 'identity split-face-name "-"))
+                  (if (facep concat-face-name)
+                      concat-face-name
+                    (report-wrong-prefix))))
+
+          (t (report-wrong-prefix)))))
+
+
+(require 'vim-colors)
+;;(cdr (assoc 'normal (cdr (assoc "filename" vim-powerline-colors-alist))))
 (defun powerline-vimish-theme ()
   "Setup the default mode-line."
+  ;; Populate our faces 
+  
   (interactive)
   (setq-default mode-line-format
                 '("%e"
                   (:eval
                    (let* ((active (powerline-selected-window-active))
                           (mode-line (if active 'mode-line 'mode-line-inactive))
-                          (face1 (if active 'powerline-active1 'powerline-inactive1))
-                          (face2 (if active 'powerline-active2 'powerline-inactive2))
-						  (face3 (if active 'powerline-active3 'powerline-inactive3))
                           (separator-left (intern (format "powerline-%s-%s"
-                                                          powerline-default-separator
+                                                          (powerline-current-separator)
                                                           (car powerline-default-separator-dir))))
                           (separator-right (intern (format "powerline-%s-%s"
-                                                           powerline-default-separator
+                                                           (powerline-current-separator)
                                                            (cdr powerline-default-separator-dir))))
+                          (splitter-left (cond ((eq powerline-default-separator 'utf-8) "")
+                                               ((eq powerline-default-separator 'nil) "|")
+                                               (t ">")))
+                          (splitter-right (cond ((eq powerline-default-separator 'utf-8) "")
+                                                ((eq powerline-default-separator 'nil) "|")
+                                                (t "<")))
+
+                          (mode-face (if evil-mode
+                                         (pcase evil-state
+                                           (emacs "Emacs")
+                                           (replace "Replace")
+                                           (operator "Operator")
+                                           (visual "Visual")
+                                           (insert "Insert")
+                                           (normal "Normal"))))
+                          ;; Left hand side
                           (lhs (list
-							         (powerline-raw (format " %-8s " (if active "active" "inactive")) face3 'r)
-									 (funcall separator-left face3 face2)
-									 (when (and (buffer-file-name (current-buffer)) 
-												vc-mode)
-									   (concat (powerline-raw (downcase (format-mode-line '(vc-mode vc-mode))) face2 'r)
-											   (powerline-raw "❯" face2)))
-                                     (powerline-buffer-id face2 'l)
-									 (powerline-raw "%*" face2 'l)
-                                     (powerline-raw " " face2)
-                                     (powerline-narrow face2 'l)
-                                     (funcall separator-left face2 face1)))
+                                (if evil-mode
+                                    (powerline-raw))
+                                (powerline-raw (format " %-8s " (if active "active" "inactive")) face3 'r)
+                                (funcall separator-left face3 face2)
+                                (when (and (buffer-file-name (current-buffer))
+                                           vc-mode)
+                                  (concat (powerline-raw (downcase (format-mode-line '(vc-mode vc-mode))) face2 'r)
+                                          (powerline-raw splitter-left face2)))
+                                (powerline-buffer-id face2 'l)
+                                (powerline-raw "%*" face2 'l)
+                                (powerline-raw " " face2)
+                                (powerline-narrow face2 'l)
+                                (funcall separator-left face2 face1)))
+
+                          ;; Right Hand Side
                           (rhs (list (powerline-raw global-mode-string face1 'r)
-									 (let* ((input (split-string (symbol-name buffer-file-coding-system) "-"))
-											(platform (check-in-list input '("mac" "unix" "dos")))
-											(encoding (delete platform input)))
-									   (concat
-										(if (not (null platform))
-											(concat (powerline-raw platform face1)
-													(powerline-raw " ❮ " face1))
-										  "")
-										(powerline-raw (mapconcat 'identity encoding "-") face1)))
-									 (powerline-raw " ❮" face1)
-                                     (downcase (powerline-major-mode face1 'l))
+                                     (let* ((input (split-string (symbol-name buffer-file-coding-system) "-"))
+                                            (platform (check-in-list input '("mac" "unix" "dos")))
+                                            (encoding (delete platform input)))
+                                       (concat
+                                        (when (not (null platform))
+                                          (concat (powerline-raw platform face1)
+                                                  (powerline-raw (concat " " splitter-right " ") face1)))
+                                        (powerline-raw (mapconcat 'identity encoding "-") face1)))
+                                     ;; (powerline-raw " ❮" face1)
+                                     ;; (powerline-raw " <" face1)
+                                     (powerline-raw (concat " " splitter-right) face1)
+                                     (powerline-major-mode face1 'l)
                                      (powerline-raw " " face1)
                                      (funcall separator-right face1 face2)
                                      (powerline-raw " " face2)
@@ -316,6 +365,8 @@
                                      (powerline-raw ": " nil 'l)
                                      (powerline-raw "%c" nil 'r)
                                      (powerline-hud face2 face1))))
+
+                     
                      (concat (powerline-render lhs)
                              (powerline-fill face1 (powerline-width rhs))
                              (powerline-render rhs)))))))
