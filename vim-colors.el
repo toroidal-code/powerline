@@ -66,10 +66,10 @@
         (powerline--expand-alist
          `((("SPLIT")
             (normal      ,white           ,gray2)
-            (noncurrent  ,white           ,gray0)
+            (inactive    ,white           ,gray0)
             (insert      ,white           ,darkestblue))
            
-           (("mode_indicator")
+           (("state_indicator")
             (normal      ,darkestgreen    ,brightgreen  t)
             (insert      ,darkestcyan     ,white        t)
             (visual      ,darkred         ,brightorange t)
@@ -78,27 +78,27 @@
            
            (("branch" "scrollpercent" "raw" "filesize")
             (normal      ,gray9           ,gray4)
-            (noncurrent  ,gray4           ,gray1)
+            (inactive    ,gray4           ,gray1)
             (insert      ,mediumcyan      ,darkblue))
            
            (("fileinfo" "filename")
             (normal      ,white           ,gray4        t)
-            (noncurrent  ,gray7           ,gray0        t)
+            (inactive    ,gray7           ,gray0        t)
             (insert      ,white           ,darkblue     t))
            
            (("fileinfo.filepath")
             (normal      ,gray10)
-            (noncurrent  ,gray5)
+            (inactive    ,gray5)
             (insert      ,mediumcyan))
            
            (("static_str")
             (normal      ,white           ,gray4)
-            (noncurrent  ,gray7           ,gray1)
+            (inactive    ,gray7           ,gray1)
             (insert      ,white           ,darkblue))
            
            (("fileinfo.flags")
             (normal      ,brightestred    nil          t)
-            (noncurrent  ,darkred)
+            (inactive    ,darkred)
             (insert      ,brightestred    nil          t))
            
            (("currenttag" "fullcurrenttag" "fileformat" "fileencoding"
@@ -109,7 +109,7 @@
            
            (("lineinfo")
             (normal      ,gray2           ,gray10       t)
-            (noncurrent  ,gray7           ,gray1        t)
+            (inactive    ,gray7           ,gray1        t)
             (insert      ,darkestcyan     ,mediumcyan   t))
            
            (("errors")
@@ -118,7 +118,7 @@
            
            (("lineinfo.line.tot")
             (normal      ,gray6)
-            (noncurrent  ,gray5)
+            (inactive    ,gray5)
             (insert      ,darkestcyan))
            
            (("paste_indicator" "ws_marker")
@@ -126,31 +126,31 @@
            
            (("gundo.static_str.name" "command_t.static_str.name")
             (normal      ,white           ,mediumred    t)
-            (noncurrent  ,brightred       ,darkestred   t))
+            (inactive    ,brightred       ,darkestred   t))
            
            (("gundo.static_str.buffer" "command_t.raw.line")
             (normal      ,white           ,darkred)
-            (noncurrent  ,brightred       ,darkestred))
+            (inactive    ,brightred       ,darkestred))
            
            (("gundo.SPLIT" "command_t.SPLIT")
             (normal      ,white           ,darkred)
-            (noncurrent  ,white           ,darkestred))
+            (inactive    ,white           ,darkestred))
            
            (("lustyexplorer.static_str.name"
              "minibufexplorer.static_str.name"
              "nerdtree.raw.name" "tagbar.static_str.name")
             (normal      ,white           ,mediumgreen  t)
-            (noncurrent  ,mediumgreen     ,darkestgreen t))
+            (inactive    ,mediumgreen     ,darkestgreen t))
            
            (("lustyexplorer.static_str.buffer"
              "tagbar.static_str.buffer")
             (normal      ,brightgreen     ,darkgreen)
-            (noncurrent  ,mediumgreen     ,darkestgreen))
+            (inactive    ,mediumgreen     ,darkestgreen))
            
            (("lustyexplorer.SPLIT" "minibufexplorer.SPLIT"
              "nerdtree.SPLIT" "tagbar.SPLIT")
             (normal      ,white           ,darkgreen)
-            (noncurrent  ,white           ,darkestgreen))
+            (inactive    ,white           ,darkestgreen))
            
            (("ctrlp.focus" "ctrlp.byfname")
             (normal      ,brightpurple    ,darkestpurple))

@@ -17,6 +17,8 @@
 
 ;;; Code:
 
+(require 'cl-lib)
+
 (defcustom powerline-display-buffer-size t
   "When non-nil, display the buffer size."
   :type 'boolean)
@@ -269,35 +271,61 @@
 
 ;; Get a face for the current input mode and
 ;; desired feature. Defaults to "powerline-FEATURE-normal"
-(defun powerline--get-vim-face (face &optional last-face original)
+(defun pl/get-vim-face (face)
   "Find whether or not FACE is a valid face,
 and if not, try to get the corresponding 
 '-normal' face "
-  (let ((split-face-name nil) (concat-face-name nil)
-        (report-wrong-prefix
-         (lambda ()
-           (let ((prefix (subseq (or split-face-name (split-string face "-")) 0 2)))
-             (error "There's no vim face with the prefix: %s"
-                    (mapconcat 'identity prefix "-"))))))
-    (cond ((facep face)
-           (intern face))
-          ((and (< 2 (length (setf split-face-name (split-string face "-"))))
-                (string-equal (first split-face-name) "powerline")
-                (not (string-equal (third split-face-name) "normal")))
-           (progn (setf (nth 3 split-face-name) "normal")
-                  (setf concat-face-name (mapconcat 'identity split-face-name "-"))
-                  (if (facep concat-face-name)
-                      concat-face-name
-                    (report-wrong-prefix))))
+  (let ((split-face-name nil) (concat-face-name nil) ; some variables we'll use later on
+        (report-wrong-prefix ; Our error reporter. Because we don't want to return nil.
+         (lambda () (let ((prefix (subseq (or split-face-name (split-string face "-")) 0 2)))
+                      (error "There's no vim face with the prefix: %s"
+                             (mapconcat 'identity prefix "-"))))))
+    
+    (cond ((facep face)                 ; If our FACE is a face (even if it's not a powerline face)
+           (intern face))               ; just intern the string and send it back
 
+          ;; Otherwise.
+          ;; Are we a list of only three items?  
+          ;; Is the first item a string that is 'powerline'?  
+          ;; Is the last element not 'normal'? (If it was valid, it would have already passed)          
+          ((and (= 3 (length (setf split-face-name (split-string face "-"))))
+                (string-equal (cl-first split-face-name) "powerline")
+                (not (string-equal (cl-third split-face-name) "normal")))
+
+           ;; If we passed all the tests above, then we try to create a valid
+           ;; powerline-face symbol
+           (progn
+             
+             ;; If we are in the 'emacs' state but don't have a valid face,
+             ;; we'll use 'insert' as the base state.
+             (if (string-equal (cl-third split-face-name) "emacs")
+                 (setf (cl-third split-face-name) "insert")
+
+               ;; Otherwise, we set the state to 'normal'
+               (setf (cl-third split-face-name) "normal"))
+
+             ;; Re-build our string from the split pieces
+             (setf concat-face-name (mapconcat 'identity split-face-name "-"))
+
+             ;; And do one final check to make sure it's a face
+             ;; before sending it off
+             ;; (message "Concatenated name: %s" concat-face-name)
+             (if (facep concat-face-name)
+                 (intern concat-face-name)
+               (report-wrong-prefix))))
+
+          ;; Always fallthrough to the error
           (t (report-wrong-prefix)))))
 
 
+(defmacro pl/vim-face (name state)
+  `(pl/get-vim-face (format "powerline-%s-%s" ,name ,state)))
+
 (require 'vim-colors)
-;;(cdr (assoc 'normal (cdr (assoc "filename" vim-powerline-colors-alist))))
 (defun powerline-vimish-theme ()
   "Setup the default mode-line."
   ;; Populate our faces 
+  (mapcar 'eval  (powerline--generate-facedefs powerline-vim-colors-alist))
   
   (interactive)
   (setq-default mode-line-format
@@ -305,73 +333,80 @@ and if not, try to get the corresponding
                   (:eval
                    (let* ((active (powerline-selected-window-active))
                           (mode-line (if active 'mode-line 'mode-line-inactive))
-                          (separator-left (intern (format "powerline-%s-%s"
+                          (harddiv-left (intern (format "powerline-%s-%s"
                                                           (powerline-current-separator)
                                                           (car powerline-default-separator-dir))))
-                          (separator-right (intern (format "powerline-%s-%s"
+                          (harddiv-right (intern (format "powerline-%s-%s"
                                                            (powerline-current-separator)
                                                            (cdr powerline-default-separator-dir))))
-                          (splitter-left (cond ((eq powerline-default-separator 'utf-8) "")
+                          (softdiv-left (cond ((eq powerline-default-separator 'utf-8) "")
                                                ((eq powerline-default-separator 'nil) "|")
                                                (t ">")))
-                          (splitter-right (cond ((eq powerline-default-separator 'utf-8) "")
+                          (softdiv-right (cond ((eq powerline-default-separator 'utf-8) "")
                                                 ((eq powerline-default-separator 'nil) "|")
                                                 (t "<")))
 
-                          (mode-face (if evil-mode
-                                         (pcase evil-state
-                                           (emacs "Emacs")
-                                           (replace "Replace")
-                                           (operator "Operator")
-                                           (visual "Visual")
-                                           (insert "Insert")
-                                           (normal "Normal"))))
+                          (editor-state (cond ((and active evil-mode)
+                                               (symbol-name evil-state))
+                                              (active "active")
+                                              (t "inactive")))
+                          (state-indicator-face (pl/vim-face "state_indicator" editor-state))
+                          (vc-face              (pl/vim-face "branch" editor-state))
+                          (fileinfo-face        (pl/vim-face "fileinfo" editor-state))
+                          (split-face           (pl/vim-face "SPLIT" editor-state))
+
+                          (fileformat-face      (pl/vim-face "fileformat" editor-state))
+                          (fileencoding-face    (pl/vim-face "fileencoding" editor-state))
+                          (filetype-face        (pl/vim-face "filetype" editor-state))
+
+                          (scrollpercent-face   (pl/vim-face "scrollpercent" editor-state))
+                          (lineinfo-face        (pl/vim-face "lineinfo" editor-state))
+                          
+                          (input (split-string (symbol-name buffer-file-coding-system) "-"))
+                          (platform (check-in-list input '("mac" "unix" "dos")))
+                          (encoding (mapconcat 'identity (delete platform input) "-"))
+                          
+
                           ;; Left hand side
                           (lhs (list
-                                (if evil-mode
-                                    (powerline-raw))
-                                (powerline-raw (format " %-8s " (if active "active" "inactive")) face3 'r)
-                                (funcall separator-left face3 face2)
-                                (when (and (buffer-file-name (current-buffer))
-                                           vc-mode)
-                                  (concat (powerline-raw (downcase (format-mode-line '(vc-mode vc-mode))) face2 'r)
-                                          (powerline-raw splitter-left face2)))
-                                (powerline-buffer-id face2 'l)
-                                (powerline-raw "%*" face2 'l)
-                                (powerline-raw " " face2)
-                                (powerline-narrow face2 'l)
-                                (funcall separator-left face2 face1)))
+                                (powerline-raw (format " %s " (upcase editor-state)) state-indicator-face)
+                                (funcall harddiv-left state-indicator-face vc-face)
+                                (when (and (buffer-file-name (current-buffer)) vc-mode)
+                                  (concat
+                                   (powerline-raw (downcase (format-mode-line '(vc-mode vc-mode))) vc-face 'r)
+                                   (powerline-raw softdiv-left vc-face)))
+                                (powerline-buffer-id fileinfo-face 'l)
+                                (powerline-raw "%* " fileinfo-face 'l)
+                                ;; (powerline-raw " " face2)
+                                (powerline-narrow fileinfo-face 'l)
+                                (funcall harddiv-left fileinfo-face split-face)))
 
                           ;; Right Hand Side
-                          (rhs (list (powerline-raw global-mode-string face1 'r)
-                                     (let* ((input (split-string (symbol-name buffer-file-coding-system) "-"))
-                                            (platform (check-in-list input '("mac" "unix" "dos")))
-                                            (encoding (delete platform input)))
-                                       (concat
-                                        (when (not (null platform))
-                                          (concat (powerline-raw platform face1)
-                                                  (powerline-raw (concat " " splitter-right " ") face1)))
-                                        (powerline-raw (mapconcat 'identity encoding "-") face1)))
-                                     ;; (powerline-raw " ❮" face1)
-                                     ;; (powerline-raw " <" face1)
-                                     (powerline-raw (concat " " splitter-right) face1)
-                                     (powerline-major-mode face1 'l)
-                                     (powerline-raw " " face1)
-                                     (funcall separator-right face1 face2)
-                                     (powerline-raw " " face2)
-                                     (powerline-raw "%p" face2 'r)
-                                     (funcall separator-right face2 mode-line)
-                                     (powerline-raw "%l" nil 'l)
-                                     (powerline-raw ": " nil 'l)
-                                     (powerline-raw "%c" nil 'r)
-                                     (powerline-hud face2 face1))))
+                          (rhs (list
+                                (powerline-raw global-mode-string split-face 'r)
+                                ;; (funcall harddiv-right split-face)
+                                (concat
+                                 (when (not (null platform))
+                                   (concat (powerline-raw platform fileformat-face)
+                                           (powerline-raw (concat " " softdiv-right " ") fileformat-face)))
+                                 (powerline-raw encoding fileencoding-face)
+                                 (powerline-raw (concat " " softdiv-right) fileencoding-face))
+                                (powerline-major-mode filetype-face 'l)
+                                (powerline-raw " " filetype-face)
+                                (funcall harddiv-right filetype-face scrollpercent-face)
+                                (powerline-raw " " scrollpercent-face)
+                                (powerline-raw "%p" scrollpercent-face 'r)
+                                (funcall harddiv-right scrollpercent-face lineinfo-face)
+                                (powerline-raw "%l" lineinfo-face 'l)
+                                (powerline-raw ": " lineinfo-face 'l)
+                                (powerline-raw "%c" lineinfo-face 'r)
+                                ;; (powerline-hud face2 face1)
+                                )))
 
                      
                      (concat (powerline-render lhs)
-                             (powerline-fill face1 (powerline-width rhs))
+                             (powerline-fill split-face (powerline-width rhs))
                              (powerline-render rhs)))))))
-
-
 
 (provide 'powerline-themes)
 
