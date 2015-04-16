@@ -340,13 +340,18 @@ and if not, try to get the corresponding
                           (harddiv-right (intern (format "powerline-%s-%s"
                                                            (powerline-current-separator)
                                                            (cdr powerline-default-separator-dir))))
-                          (softdiv-left (cond ((eq powerline-default-separator 'utf-8) "")
-                                               ((eq powerline-default-separator 'nil) "|")
-                                               (t ">")))
-                          (softdiv-right (cond ((eq powerline-default-separator 'utf-8) "")
-                                                ((eq powerline-default-separator 'nil) "|")
-                                                (t "<")))
-                          (editor-state (cond ((and active evil-mode) (symbol-name evil-state))
+                          (softdiv-left (cl-case powerline-default-separator
+                                          ((utf-8 arrow) "")
+                                          ((bar nil) "|")
+                                          (brace "}")
+                                          (t ">")))
+                          (softdiv-right (cl-case powerline-default-separator
+                                          ((utf-8 arrow) "")
+                                          ((bar nil) "|")
+                                          (brace "{")
+                                          (t "<")))
+                          (editor-state (cond ((and active (boundp 'evil-mode) evil-mode)
+                                               (symbol-name evil-state))
                                               (active "active")
                                               (t "inactive")))
                           (state-indicator-face (pl/vim-face "state_indicator" editor-state))
@@ -365,7 +370,6 @@ and if not, try to get the corresponding
                           (platform (check-in-list input '("mac" "unix" "dos")))
                           (encoding (mapconcat 'identity (delete platform input) "-"))
                           
-
                           ;; Left hand side
                           (lhs (list
                                 (powerline-raw (format " %s " (upcase editor-state)) state-indicator-face)
@@ -396,13 +400,13 @@ and if not, try to get the corresponding
                                 (powerline-raw "%l" lineinfo-face 'l)
                                 (powerline-raw ":" lineinfo-face 'lr)
                                 (powerline-raw "%c" lineinfo-face 'r))))
+
                      (when active
-                       (set-face-attribute 'mode-line-active nil
-;;                                          :background nil ;;(face-background (pl/vim-face "SPLIT" "active"))
-;;                                         :underline nil
-;;                                         :overline nil
-;;                                         :box t
-                                          ))
+                       (set-face-attribute 'mode-line nil :underline nil :overline nil :box nil))
+                     (if (and (null powerline-default-separator)
+                              (null  (face-attribute 'powerline-SPLIT-normal :overline)))
+                         nil
+                       nil)
                      (concat (powerline-render lhs)
                              (powerline-fill split-face (powerline-width rhs))
                              (powerline-render rhs)))))))

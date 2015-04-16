@@ -1,4 +1,5 @@
-
+;; The colors in this file are from the original vim-powerline 
+;; repository at https://github.com/Lokaltog/vim-powerline/blob/develop/autoload/Powerline/Colorschemes/default.vim
 
 (defun powerline--expand-alist (alist)
   (cl-loop for (keys . vals) in alist append
@@ -8,9 +9,9 @@
   `((t (:foreground ,fg
         :background ,bg
         :bold ,bold
-        :overline nil
+        :overline ,(when (null powerline-default-separator) bg)
         :underline nil
-        :box ,bg))))
+        :box ,(when (eq powerline-default-separator 'utf-8) bg)))))
 
 (defun powerline--gen-facedef (feature mode args)
   (let* ((name (format "powerline-%s-%s" feature mode))
